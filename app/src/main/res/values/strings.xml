@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">SE2SingleTest</string>
+    <string name="labelEnterNumber">Enter your matriculation number</string>
+    <string name="labelResultFromServer">Result from Server</string>
+    <string name="buttonSendRequest">Send</string>
+</resources>

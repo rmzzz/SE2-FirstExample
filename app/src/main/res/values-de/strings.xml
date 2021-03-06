@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SE2Einzelbeispiel</string>
+    <string name="labelEnterNumber">Gib deine Matrikelnummer ein</string>
+    <string name="labelResultFromServer">Antwort vom Server</string>
+    <string name="buttonSendRequest">Abschicken</string>
+</resources>
