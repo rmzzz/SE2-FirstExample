@@ -2,24 +2,27 @@ package at.aau.se2.singletest;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.Editable;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observer;
 import io.reactivex.rxjava3.disposables.Disposable;
-import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
+
+    static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     Button sendButton;
     EditText editText;
     TextView resultText;
     MatriculationNumberService matriculationNumberService;
+    Disposable currentCall;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,46 +34,44 @@ public class MainActivity extends AppCompatActivity {
         editText = findViewById(R.id.editTextStudentId);
         resultText = findViewById(R.id.labelResult);
 
-        Observer<String> observer = new Observer<String>() {
-            @Override
-            public void onSubscribe(@NonNull Disposable d) {
-            }
-
-            @Override
-            public void onNext(@NonNull String s) {
-                resultText.append(s);
-            }
-
-            @Override
-            public void onError(@NonNull Throwable e) {
-                editText.setEnabled(true);
-                sendButton.setEnabled(true);
-            }
-            @Override
-            public void onComplete() {
-                editText.setEnabled(true);
-                sendButton.setEnabled(true);
-            }
-        };
         sendButton.setOnClickListener(v -> {
             Editable text = editText.getText();
             String value = text.toString();
             sendButton.setEnabled(false);
             editText.setEnabled(false);
 
-            matriculationNumberService.send(value)
-                    .subscribeOn(Schedulers.newThread())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(observer);
+            currentCall = matriculationNumberService.send(value,
+                    this::onResponseReceived, this::onSendError);
         });
+    }
+
+    void onResponseReceived(String response) {
+        Log.i(LOG_TAG, "received response: " + response);
+        resultText.append("\n" + response);
+
+        editText.setEnabled(true);
+        sendButton.setEnabled(true);
+    }
+
+    void onSendError(Throwable error) {
+        Log.e(LOG_TAG, "Error: " + error.getMessage(), error);
+
+        new AlertDialog.Builder(this)
+                .setMessage("Error: " + error.getMessage())
+                .setTitle("Error")
+                .setNeutralButton("OK", (d, w) -> d.dismiss())
+                .create()
+                .show();
+
+        editText.setEnabled(true);
+        sendButton.setEnabled(true);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(matriculationNumberService != null) {
-            //matriculationNumberService.cancel();
+        if (currentCall != null) {
+            currentCall.dispose();
         }
-
     }
 }

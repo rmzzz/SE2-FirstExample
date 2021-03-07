@@ -1,52 +1,49 @@
 package at.aau.se2.singletest;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.InputStreamReader;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.concurrent.CompletableFuture;
 
-import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.functions.Consumer;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class MatriculationNumberService {
 
-    static String host = "se2-isys.aau.at";
-    static int port = 53212;
+    static final String HOST = "se2-isys.aau.at";
+    static final int PORT = 53212;
 
     String sendSync(String request) {
-        try (Socket s = new Socket(host, port);
-             OutputStream out = s.getOutputStream()) {
-            out.write(request.getBytes());
-            out.write('\n');
+        try (Socket s = new Socket(HOST, PORT);
+             DataOutputStream out = new DataOutputStream(s.getOutputStream())) {
+            out.writeBytes(request + '\n');
             out.flush();
 
-            String result;
-            try (InputStream in = s.getInputStream()) {
-                byte[] buf = new byte[256];
-                int count = 0;
-                for (int b = in.read(); b != -1; b = in.read()) {
-                    if (count >= buf.length) {
-                        buf = Arrays.copyOf(buf, buf.length * 2);
-                    }
-                    buf[count++] = (byte) b;
-                }
-                result = new String(buf, 0, count);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
+                return in.readLine();
             }
-            return result;
         } catch (IOException ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    public Observable<String> send(String request) {
-        return Observable.create(s -> {
+    public Disposable send(String request,
+                           @NonNull Consumer<String> onSuccess,
+                           @NonNull Consumer<? super Throwable> onError) {
+        Single<String> single = Single.create(s -> {
             try {
-                s.onNext(sendSync(request));
-                s.onComplete();
+                s.onSuccess(sendSync(request));
             } catch (Exception e) {
                 s.onError(e);
             }
         });
+        return single.subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(onSuccess, onError);
     }
 }
