@@ -5,6 +5,12 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.annotations.NonNull;
@@ -17,6 +23,7 @@ public class MatriculationNumberService {
 
     static final String HOST = "se2-isys.aau.at";
     static final int PORT = 53212;
+    static final int MAX_NUMBER = 9999_9999;
 
     String sendSync(String request) {
         try (Socket s = new Socket(HOST, PORT);
@@ -45,5 +52,25 @@ public class MatriculationNumberService {
         return single.subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(onSuccess, onError);
+    }
+
+    final SortedSet<Integer> repository = new TreeSet<>(Comparator
+            .comparingInt(x -> (int)x % 2)
+            .thenComparingInt(x -> (int)x));
+
+    List<String> sortedNumbersAsStrings() {
+        return repository.stream()
+                .map(x -> String.format(Locale.ROOT, "%08d", x))
+                .collect(Collectors.toList());
+    }
+
+    public List<String> insertSorted(@NonNull String number) {
+        int parsed = Integer.parseInt(number);
+        if(parsed <= 0 || parsed > MAX_NUMBER)
+            throw new IllegalArgumentException("Invalid number: " + number);
+
+        repository.add(parsed);
+
+        return sortedNumbersAsStrings();
     }
 }

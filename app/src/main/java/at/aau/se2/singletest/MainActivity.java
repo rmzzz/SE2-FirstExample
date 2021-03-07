@@ -10,6 +10,9 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observer;
 import io.reactivex.rxjava3.disposables.Disposable;
@@ -40,9 +43,22 @@ public class MainActivity extends AppCompatActivity {
             sendButton.setEnabled(false);
             editText.setEnabled(false);
 
-            currentCall = matriculationNumberService.send(value,
-                    this::onResponseReceived, this::onSendError);
+//            currentCall = matriculationNumberService.send(value,
+//                    this::onResponseReceived, this::onSendError);
+            try {
+                // the call is too short to make it async
+                onSortNumber(matriculationNumberService.insertSorted(value));
+            } catch (Exception ex) {
+                onSendError(ex);
+            }
         });
+    }
+
+    void onSortNumber(List<String> numbers) {
+        editText.getText().clear();
+        editText.setEnabled(true);
+        sendButton.setEnabled(true);
+        resultText.setText(String.join("\n", numbers));
     }
 
     void onResponseReceived(String response) {
